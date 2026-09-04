@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Interactive Black Hole Laboratory</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+</head>
+<body>
+
+  <div id="webgl-fallback" class="fallback-overlay hidden">
+    <div class="fallback-card">
+      <h2>WebGL Required</h2>
+      <p>WebGL is required for the interactive 3D simulation.</p>
+      <p>Please use a modern browser with hardware acceleration enabled.</p>
+    </div>
+  </div>
+
+  <div id="loading-screen" class="loading-overlay">
+    <div class="loading-content">
+      <div class="spinner"></div>
+      <h1 class="loading-title">BLACK HOLE SIMULATION</h1>
+      <p id="loading-status" class="loading-status">Initializing spacetime...</p>
+    </div>
+  </div>
+
+  <div id="canvas-container"></div>
+
+  <header class="app-header">
+    <div class="brand">
+      <span class="brand-title">EVENT HORIZON</span>
+      <span class="brand-sub">KERR-INSPIRED LABORATORY</span>
+    </div>
+    <div class="header-actions">
+      <button id="btn-about" class="btn-icon" aria-label="About Simulation">
+        <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+        <span>About</span>
+      </button>
+      <button id="btn-reset" class="btn-icon" aria-label="Reset Simulation (Shortcut: R)">
+        <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none"><path d="M23 4v6h-6"></path><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg>
+        <span>Reset [R]</span>
+      </button>
+    </div>
+  </header>
+
+  <main class="ui-layer">
+    
+    <aside class="panel panel-left" id="panel-controls">
+      <div class="panel-header">
+        <span class="panel-title">PHYSICAL PARAMETERS</span>
+        <button class="panel-toggle" id="toggle-controls" aria-label="Toggle Panel">−</div>
+      </div>
+      <div class="panel-body">
+        
+        <div class="control-group">
+          <label for="select-preset">PRESET CONFIGURATION</label>
+          <select id="select-preset" class="select-input">
+            <option value="default">Default Stellar-Mass</option>
+            <option value="quiet">Quiet Black Hole</option>
+            <option value="active">Active Accretion Disk</option>
+            <option value="spin">Rapid Spin (Kerr)</option>
+            <option value="extreme">Extreme Gravity</option>
+            <option value="supermassive">Supermassive Core</option>
+            <option value="binary">X-Ray Binary</option>
+            <option value="jet">Jet-Dominated</option>
+            <option value="educational">Educational Mode</option>
+          </select>
+        </div>
+
+        <div class="control-group">
+          <label for="select-type">BLACK HOLE CLASS</label>
+          <select id="select-type" class="select-input">
+            <option value="stellar">Stellar (10 M☉)</option>
+            <option value="intermediate">Intermediate (1,000 M☉)</option>
+            <option value="supermassive">Supermassive (1,000,000 M☉)</option>
+          </select>
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="control-group">
+          <div class="label-row">
+            <label for="input-mass">MASS (M☉)</label>
+            <span id="val-mass" class="value-readout">10.0 M☉</span>
+          </div>
+          <input type="range" id="input-mass" min="1" max="100" step="0.5" value="10">
+        </div>
+
+        <div class="control-group">
+          <div class="label-row">
+            <label for="input-spin">SPIN (a*)</label>
+            <span id="val-spin" class="value-readout">0.720</span>
+          </div>
+          <input type="range" id="input-spin" min="0.000" max="0.998" step="0.001" value="0.720">
+          <span class="micro-text">Kerr-Inspired Approximation</span>
+        </div>
+
+        <div class="control-group">
+          <div class="label-row">
+            <label for="input-accretion">ACCRETION RATE</label>
+            <span id="val-accretion" class="value-readout">0.35</span>
+          </div>
+          <input type="range" id="input-accretion" min="0.00" max="1.00" step="0.01" value="0.35">
+        </div>
+
+        <div class="control-group">
+          <div class="label-row">
+            <label for="input-angle">VIEWING ANGLE</label>
+            <span id="val-angle" class="value-readout">65°</span>
+          </div>
+          <input type="range" id="input-angle" min="0" max="90" step="1" value="65">
+        </div>
+
+        <div class="control-group">
+          <div class="label-row">
+            <label for="input-speed">SIMULATION SPEED</label>
+            <span id="val-speed" class="value-readout">1.0x</span>
+          </div>
+          <input type="range" id="input-speed" min="0.1" max="5.0" step="0.1" value="1.0">
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="toggle-row">
+          <label class="toggle-container">
+            <input type="checkbox" id="toggle-jets" checked>
+            <span class="toggle-slider"></span>
+            <span class="toggle-label">RELATIVISTIC JETS [J]</span>
+          </label>
+        </div>
+
+        <div class="toggle-row">
+          <label class="toggle-container">
+            <input type="checkbox" id="toggle-ergosphere">
+            <span class="toggle-slider"></span>
+            <span class="toggle-label">ERGOSPHERE [E]</span>
+          </label>
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="control-group">
+          <label>CAMERA PRESETS</label>
+          <div class="btn-grid">
+            <button class="btn-preset-cam" data-cam="orbit">ORBIT</button>
+            <button class="btn-preset-cam" data-cam="top">TOP</button>
+            <button class="btn-preset-cam" data-cam="side">SIDE</button>
+            <button class="btn-preset-cam" data-cam="edge">EDGE-ON</button>
+            <button class="btn-preset-cam Highlight" data-cam="gods">GOD'S EYE [G]</button>
+          </div>
+        </div>
+
+      </div>
+    </aside>
+
+    <aside class="panel panel-right" id="panel-hud">
+      <div class="panel-header">
+        <span class="panel-title">LIVE TELEMETRY HUD</span>
+        <button class="panel-toggle" id="toggle-hud" aria-label="Toggle Panel">−</div>
+      </div>
+      <div class="panel-body">
+        
+        <div class="telemetry-card">
+          <span class="card-label">SCHWARZSCHILD RADIUS (r_s)</span>
+          <span id="hud-rs" class="card-value highlight">29.53 km</span>
+          <span class="card-sub">Event Horizon Boundary</span>
+        </div>
+
+        <div class="telemetry-card">
+          <span class="card-label">ISCO RADIUS (r_isco)</span>
+          <span id="hud-isco" class="card-value">88.59 km</span>
+          <span class="card-sub">Innermost Stable Circular Orbit</span>
+        </div>
+
+        <div class="telemetry-card">
+          <span class="card-label">DISK TEMPERATURE</span>
+          <span id="hud-temp" class="card-value">8.24 × 10⁷ K</span>
+          <span id="hud-temp-sub" class="card-sub">Simplified Accretion-Disk Model</span>
+        </div>
+
+        <div class="telemetry-card">
+          <span class="card-label">PLASMA PRESSURE</span>
+          <span id="hud-pressure" class="card-value">3.41 × 10¹⁰ Pa</span>
+          <span class="card-sub">P ≈ n·k·T Approximation</span>
+        </div>
+
+        <div class="telemetry-card">
+          <span class="card-label">MATTER DENSITY</span>
+          <span id="hud-density" class="card-value">2.40 × 10⁻⁶ kg/m³</span>
+          <span class="card-sub">Peak Inner Boundary Density</span>
+        </div>
+
+        <div class="telemetry-card">
+          <span class="card-label">GRAVITATIONAL ACCELERATION</span>
+          <span id="hud-gravity" class="card-value">1.22 × 10¹² m/s²</span>
+          <span class="card-sub">At ISCO Boundary</span>
+        </div>
+
+        <div class="telemetry-card">
+          <span class="card-label">MAX ORBITAL VELOCITY</span>
+          <span id="hud-velocity" class="card-value">0.63c</span>
+          <span class="card-sub">Simulated Relativistic Speed</span>
+        </div>
+
+        <div class="telemetry-card">
+          <span class="card-label">TIME DILATION FACTOR (dτ/dt)</span>
+          <div class="hud-multi-readout">
+            <div><span>FAR AWAY:</span> <strong>1.00x</strong></div>
+            <div><span>OUTER DISK:</span> <strong id="td-outer">0.85x</strong></div>
+            <div><span>INNER DISK:</span> <strong id="td-inner">0.52x</strong></div>
+            <div><span>HORIZON:</span> <strong id="td-horizon">0.00x</strong></div>
+          </div>
+          <span class="card-sub">Schwarzschild Metric Metric</span>
+        </div>
+
+        <div id="filter-info-box" class="info-box">
+          <span id="info-box-title" class="info-box-title">NORMAL MODE</span>
+          <p id="info-box-desc" class="info-box-desc">Displaying optical light bending, Doppler boosting asymmetry, and rotating plasma disk.</p>
+        </div>
+
+      </div>
+    </aside>
+
+  </main>
+
+  <nav class="filter-bar-container">
+    <div class="filter-bar" id="filter-bar">
+      <button class="btn-filter active" data-filter="NORMAL"><span class="key-badge">1</span>NORMAL</button>
+      <button class="btn-filter" data-filter="XRAY"><span class="key-badge">2</span>X-RAY</button>
+      <button class="btn-filter" data-filter="TEMPERATURE"><span class="key-badge">3</span>TEMPERATURE</button>
+      <button class="btn-filter" data-filter="PRESSURE"><span class="key-badge">4</span>PRESSURE</button>
+      <button class="btn-filter" data-filter="DENSITY"><span class="key-badge">5</span>DENSITY</button>
+      <button class="btn-filter" data-filter="GRAVITY"><span class="key-badge">6</span>GRAVITY</button>
+      <button class="btn-filter" data-filter="VELOCITY"><span class="key-badge">7</span>VELOCITY</button>
+      <button class="btn-filter" data-filter="SPACETIME"><span class="key-badge">8</span>SPACETIME</button>
+      <button class="btn-filter" data-filter="MAGNETIC"><span class="key-badge">9</span>MAGNETIC</button>
+      <button class="btn-filter" data-filter="TIMEDILATION"><span class="key-badge">0</span>TIME DILATION</button>
+    </div>
+  </nav>
+
+  <footer class="app-footer">
+    <span>© 2026 Black Hole Simulation</span>
+    <span class="sep">•</span>
+    <span>Educational Astrophysics Visualization</span>
+  </footer>
+
+  <div id="modal-about" class="modal-overlay hidden">
+    <div class="modal-card">
+      <div class="modal-header">
+        <h3>ABOUT THE SIMULATION</h3>
+        <button id="modal-close" class="btn-close" aria-label="Close Modal">&times;</button>
+      </div>
+      <div class="modal-body">
+        
+        <h4>Scientific Concepts</h4>
+        
+        <p><strong>What is a Black Hole?</strong><br>
+        A region of spacetime where gravity is so strong that nothing, including light, can escape across its event horizon ($r_s = 2GM/c^2$).</p>
+
+        <p><strong>What is an Accretion Disk?</strong><br>
+        A disk of superheated gas and plasma orbiting a massive central body. Gravitational shear forces convert potential energy into extreme radiation.</p>
+
+        <p><strong>What is Gravitational Lensing?</strong><br>
+        General Relativity shows that mass warps spacetime. Photons traveling near the event horizon follow curved geodesics, causing light from the far side of the disk to bend over and under the horizon.</p>
+
+        <p><strong>What is a Photon Ring?</strong><br>
+        A narrow glowing band composed of photons orbitally bound in unstable circular paths at $1.5\,r_s$ before escaping to observers or falling into the horizon.</p>
+
+        <p><strong>Frame Dragging & Ergosphere</strong><br>
+        A rotating (Kerr) black hole drags spacetime itself along with its spin. The ergosphere is an oblate region outside the horizon where spacetime dragging forces all objects to rotate alongside the black hole.</p>
+
+        <p><strong>Hawking Radiation</strong><br>
+        Quantum vacuum fluctuations near the event horizon generate virtual particle pairs, creating microscopic thermal emission. For astrophysical black holes ($M \ge 10\,M_\odot$), Hawking radiation is astronomically weak ($T \sim 10^{-8}\,\text{K}$) and negligible compared to accretion glow.</p>
+
+        <div class="disclaimer-box">
+          <strong>Scientific Disclaimer:</strong><br>
+          This simulation is an educational visualization inspired by General Relativity and simplified accretion models. Physical parameters, Doppler shifts, and field geometries are relativistic approximations optimized for real-time WebGL rendering rather than full numerical relativity solutions.
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
